@@ -47,6 +47,7 @@ h4,
 }
 
 .welcome-video,
+.welcome-video-fallback,
 .welcome-overlay {
   position: absolute;
   inset: 0;
@@ -58,6 +59,58 @@ h4,
   object-fit: cover;
   filter: brightness(0.72) contrast(1.08);
   z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+.welcome-video::-webkit-media-controls,
+.hero-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.welcome-video::-webkit-media-controls-start-playback-button,
+.hero-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+.welcome-video-fallback {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.1), transparent 18%),
+    radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.05), transparent 28%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.62)),
+    url("./Untitled_design-removebg-preview.png");
+  background-position: center, center, center, center;
+  background-size: auto, auto, cover, min(62vw, 18rem);
+  background-repeat: no-repeat;
+  opacity: 0;
+}
+
+.video-fallback-hidden {
+  display: none !important;
+}
+
+.video-pending {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.video-ready {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.welcome-video-fallback #welcome-screen {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.1), transparent 18%),
+    radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.05), transparent 28%),
+    linear-gradient(180deg, #050505 0%, #0b0b0b 42%, #020202 100%);
+}
+
+body.welcome-video-fallback .welcome-video-fallback {
+  opacity: 1;
 }
 
 .welcome-overlay {
@@ -201,6 +254,28 @@ h4,
   overflow: hidden;
 }
 
+.hero-video-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.08), transparent 18%),
+    radial-gradient(circle at 50% 65%, rgba(255, 255, 255, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(10, 10, 10, 1) 0%, rgba(6, 6, 6, 1) 45%, rgba(1, 1, 1, 1) 100%);
+  opacity: 0;
+}
+
+body.hero-video-fallback .hero-media {
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.08), transparent 18%),
+    radial-gradient(circle at 50% 65%, rgba(255, 255, 255, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(10, 10, 10, 1) 0%, rgba(6, 6, 6, 1) 45%, rgba(1, 1, 1, 1) 100%);
+}
+
+body.hero-video-fallback .hero-video-fallback {
+  opacity: 1;
+}
+
 .hero-video,
 .hero-video-overlay,
 .hero-video-gradient {
@@ -215,6 +290,9 @@ h4,
   filter: grayscale(1) brightness(0.22) contrast(1.16);
   transform: scale(1.08);
   will-change: transform, opacity;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 240ms ease;
 }
 
 .hero-video-overlay {

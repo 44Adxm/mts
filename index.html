@@ -40,18 +40,22 @@
   <body class="welcome-active bg-night text-pearl antialiased selection:bg-white selection:text-black">
     <!-- Welcome overlay prekryje web pri načítaní a po dohraní videa sa odstráni -->
     <div id="welcome-screen" aria-hidden="true">
+      <div class="welcome-video-fallback" aria-hidden="true"></div>
       <video
         id="welcome-video"
-        class="welcome-video"
+        class="welcome-video video-pending"
         autoplay
         muted
+        loop
         playsinline
         webkit-playsinline="true"
         preload="auto"
-        poster="./Instagram_files/655778952_18039647522775699_8169573190052886792_n.jpg"
+        poster="./Untitled_design-removebg-preview.png"
         disablepictureinpicture
+        disableremoteplayback
+        style="width: 100%; height: 100%; object-fit: cover;"
       >
-        <source src="./Untitled design.mp4" type="video/mp4" />
+        <source src="./video.mp4" type="video/mp4" />
       </video>
       <div class="welcome-overlay"></div>
     </div>
@@ -110,22 +114,22 @@
     <main class="relative z-10">
       <section id="hero" class="relative min-h-screen overflow-hidden">
         <div class="hero-media absolute inset-0">
+          <div class="hero-video-fallback" aria-hidden="true"></div>
           <video
             id="hero-video"
-            class="hero-video"
-            autoplay
+            class="hero-video video-pending"
             muted
             loop
             playsinline
             webkit-playsinline="true"
-            preload="auto"
-            poster="./Instagram_files/655778952_18039647522775699_8169573190052886792_n.jpg"
+            preload="none"
+            poster="./Untitled_design-removebg-preview.png"
             disablepictureinpicture
+            disableremoteplayback
             aria-hidden="true"
+            style="width: 100%; height: 100%; object-fit: cover;"
           >
-            <source src="./smoke_4.webm" type="video/webm" />
-            <source src="./smoke_4.mp4" type="video/mp4" />
-            <source src="./smoke_4.mov" type="video/quicktime" />
+            <source data-src="./video.mp4" type="video/mp4" />
           </video>
           <div class="hero-video-overlay"></div>
           <div class="hero-video-gradient"></div>
