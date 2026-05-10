@@ -3,87 +3,12 @@ const welcomeScreen = document.getElementById("welcome-screen");
 const welcomeVideo = document.getElementById("welcome-video");
 const welcomeLogo = document.getElementById("intro-logo");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const prefersTouchDevice = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
 let heroPlaybackStarted = false;
 
-function getVideoMode(video) {
-  if (video === welcomeVideo) {
-    return "welcome";
-  }
-
-  if (video === heroVideo) {
-    return "hero";
-  }
-
-  return "video";
-}
-
 function setVideoFallback(mode, enabled) {
-  if (!document.body) {
-    return;
-  }
-
   document.body.classList.toggle(`${mode}-video-fallback`, enabled);
-}
-
-function markVideoPending(video) {
-  if (!video) {
-    return;
-  }
-
-  video.classList.add("video-pending");
-  video.classList.remove("video-ready");
-  setVideoFallback(getVideoMode(video), true);
-}
-
-function markVideoReady(video) {
-  if (!video) {
-    return;
-  }
-
-  video.classList.remove("video-pending");
-  video.classList.add("video-ready");
-  setVideoFallback(getVideoMode(video), false);
-}
-
-function hydrateVideoSources(video) {
-  if (!video) {
-    return false;
-  }
-
-  let changed = false;
-  const sources = video.querySelectorAll("source[data-src]");
-
-  sources.forEach((source) => {
-    const dataSrc = source.getAttribute("data-src");
-    if (dataSrc && source.getAttribute("src") !== dataSrc) {
-      source.setAttribute("src", dataSrc);
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    video.load();
-  }
-
-  return changed;
-}
-
-function bindVideoState(video) {
-  if (!video || video.dataset.mtsBound === "true") {
-    return;
-  }
-
-  video.dataset.mtsBound = "true";
-
-  video.addEventListener("playing", () => {
-    markVideoReady(video);
-  });
-
-  video.addEventListener("canplay", () => {
-    if (!video.paused) {
-      markVideoReady(video);
-    }
-  });
 }
 
 function enableVideoFallback(mode, video) {
@@ -94,8 +19,8 @@ function enableVideoFallback(mode, video) {
   }
 
   video.pause();
-  video.removeAttribute("autoplay");
   video.controls = false;
+  video.removeAttribute("autoplay");
   video.classList.add("video-fallback-hidden");
 }
 
@@ -104,37 +29,38 @@ function primeInlineVideo(video, { loop = false } = {}) {
     return;
   }
 
-  hydrateVideoSources(video);
-  video.preload = "auto";
   video.muted = true;
   video.defaultMuted = true;
   video.playsInline = true;
   video.loop = loop;
   video.autoplay = true;
+  video.preload = "auto";
   video.setAttribute("muted", "");
   video.setAttribute("autoplay", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "true");
 }
 
-function attemptVideoPlayback(video, { loop = false, onBlocked } = {}) {
+function attemptVideoPlayback(video, { loop = false, onBlocked, onPlaying } = {}) {
   if (!video) {
     return Promise.resolve(false);
   }
 
-  bindVideoState(video);
-  markVideoPending(video);
   primeInlineVideo(video, { loop });
 
   const playAttempt = video.play();
   if (!playAttempt || typeof playAttempt.then !== "function") {
-    markVideoReady(video);
+    if (typeof onPlaying === "function") {
+      onPlaying();
+    }
     return Promise.resolve(true);
   }
 
   return playAttempt
     .then(() => {
-      markVideoReady(video);
+      if (typeof onPlaying === "function") {
+        onPlaying();
+      }
       return true;
     })
     .catch((error) => {
@@ -143,27 +69,6 @@ function attemptVideoPlayback(video, { loop = false, onBlocked } = {}) {
       }
       return false;
     });
-}
-
-function retryVideoPlaybackOnInteraction(video, options = {}) {
-  if (!video) {
-    return;
-  }
-
-  let retried = false;
-  const retry = () => {
-    if (retried) {
-      return;
-    }
-
-    retried = true;
-    attemptVideoPlayback(video, options);
-    window.removeEventListener("touchstart", retry);
-    window.removeEventListener("pointerdown", retry);
-  };
-
-  window.addEventListener("touchstart", retry, { once: true, passive: true });
-  window.addEventListener("pointerdown", retry, { once: true, passive: true });
 }
 
 function startHeroVideoPlayback() {
@@ -182,7 +87,32 @@ function startHeroVideoPlayback() {
 }
 
 function setupWelcomeScreen() {
+  const navLogoShell = document.querySelector(".nav-logo-shell");
+  const mainNav = document.getElementById("main-nav");
+  const mobileNav = document.getElementById("main-nav-mobile");
+  const desktopNavSides = document.querySelectorAll(".nav-side");
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+  function revealNavigation() {
+    if (welcomeLogo) {
+      welcomeLogo.classList.add("is-final");
+    }
+
+    if (navLogoShell) {
+      navLogoShell.style.display = "none";
+    }
+
+    if (isMobile && mobileNav) {
+      mobileNav.style.opacity = "1";
+    }
+
+    if (!isMobile && mainNav) {
+      mainNav.style.opacity = "1";
+    }
+  }
+
   if (!welcomeScreen || !welcomeLogo) {
+    revealNavigation();
     startHeroVideoPlayback();
     return;
   }
@@ -193,17 +123,12 @@ function setupWelcomeScreen() {
 
   window.__mtsWelcomeStarted = true;
 
-  const isMobile = window.matchMedia("(max-width: 768px)").matches;
-  const navLogoShell = document.querySelector(".nav-logo-shell");
-  const mainNav = document.getElementById("main-nav");
-  const mobileNav = document.getElementById("main-nav-mobile");
-  const desktopNavSides = document.querySelectorAll(".nav-side");
-
   function finishWelcomeScreen() {
-    if (welcomeScreen.classList.contains("is-hiding")) {
+    if (welcomeScreen.dataset.finished === "true") {
       return;
     }
 
+    welcomeScreen.dataset.finished = "true";
     welcomeScreen.classList.add("is-hiding");
     startHeroVideoPlayback();
 
@@ -212,45 +137,28 @@ function setupWelcomeScreen() {
       document.body.classList.remove("welcome-active");
       document.body.style.overflow = "auto";
       document.body.style.height = "auto";
-      welcomeLogo.classList.add("is-final");
-
-      if (navLogoShell) {
-        navLogoShell.style.display = "none";
-      }
-    }, 1000);
+      revealNavigation();
+    }, 800);
   }
 
-  if (prefersReducedMotion) {
-    welcomeLogo.style.left = "50%";
-    welcomeLogo.style.top = isMobile ? "20px" : "18px";
-    welcomeLogo.style.width = isMobile ? "110px" : "138px";
-    welcomeLogo.style.opacity = "1";
-    welcomeLogo.style.filter = "blur(0px)";
-    welcomeLogo.style.transform = isMobile ? "translateX(-50%) scale(0.5)" : "translateX(-50%) scale(1.02)";
-    welcomeLogo.classList.add("is-final");
-    if (isMobile && mobileNav) {
-      mobileNav.style.opacity = "1";
-    }
-    if (!isMobile && mainNav) {
-      mainNav.style.opacity = "1";
-    }
+  if (prefersTouchDevice || prefersReducedMotion) {
     finishWelcomeScreen();
     return;
   }
 
   if (!window.gsap) {
-    window.setTimeout(finishWelcomeScreen, 2600);
-    return;
-  }
-
-  if (welcomeVideo) {
     attemptVideoPlayback(welcomeVideo, {
       loop: false,
       onBlocked: () => {
         enableVideoFallback("welcome", welcomeVideo);
-        window.setTimeout(runWelcomeTimeline, 150);
+      },
+      onPlaying: () => {
+        window.setTimeout(finishWelcomeScreen, 1800);
       },
     });
+
+    window.setTimeout(finishWelcomeScreen, 2500);
+    return;
   }
 
   if (navLogoShell) {
@@ -289,10 +197,7 @@ function setupWelcomeScreen() {
 
     const timeline = gsap.timeline({
       defaults: { ease: "power2.out" },
-      onComplete: () => {
-        gsap.set(welcomeLogo, { opacity: 1, filter: "blur(0px)" });
-        finishWelcomeScreen();
-      },
+      onComplete: finishWelcomeScreen,
     });
 
     timeline
@@ -301,17 +206,17 @@ function setupWelcomeScreen() {
         {
           opacity: 1,
           filter: "blur(0px)",
-          duration: 1,
+          duration: 0.9,
         },
-        1
+        0.5
       )
       .to(
         welcomeVideo,
         {
           opacity: 0,
-          duration: 1.5,
+          duration: 1.2,
         },
-        ">1"
+        ">0.9"
       )
       .to(
         welcomeLogo,
@@ -322,7 +227,7 @@ function setupWelcomeScreen() {
               xPercent: -50,
               yPercent: 0,
               scale: 0.5,
-              duration: 1.8,
+              duration: 1.5,
               ease: "expo.inOut",
             }
           : {
@@ -331,18 +236,10 @@ function setupWelcomeScreen() {
               xPercent: -50,
               yPercent: 0,
               scale: 1.02,
-              duration: 1.8,
+              duration: 1.5,
               ease: "expo.inOut",
             },
         ">0.05"
-      )
-      .set(
-        welcomeLogo,
-        {
-          opacity: 1,
-          filter: "blur(0px)",
-        },
-        ">"
       );
 
     if (isMobile) {
@@ -350,10 +247,10 @@ function setupWelcomeScreen() {
         mobileNav,
         {
           autoAlpha: 1,
-          duration: 0.9,
+          duration: 0.6,
           ease: "power2.out",
         },
-        "<0.05"
+        "<0.1"
       );
     } else {
       timeline
@@ -361,17 +258,17 @@ function setupWelcomeScreen() {
           mainNav,
           {
             autoAlpha: 1,
-            duration: 0.7,
+            duration: 0.6,
             ease: "power2.out",
           },
-          "<0.05"
+          "<0.1"
         )
         .to(
           desktopNavSides,
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.7,
+            duration: 0.6,
             stagger: 0.04,
             ease: "power2.out",
           },
@@ -383,54 +280,42 @@ function setupWelcomeScreen() {
       welcomeScreen,
       {
         opacity: 0,
-        duration: 0.9,
+        duration: 0.8,
       },
-      "<0.1"
+      "<0.05"
     );
   }
 
-  if (welcomeVideo) {
-    let timelineFallbackTimer = window.setTimeout(runWelcomeTimeline, 2200);
-    const clearTimelineFallback = () => {
-      if (timelineFallbackTimer) {
-        window.clearTimeout(timelineFallbackTimer);
-        timelineFallbackTimer = null;
-      }
-    };
-
-    welcomeVideo.addEventListener("loadeddata", runWelcomeTimeline, { once: true });
-    welcomeVideo.addEventListener(
-      "playing",
-      () => {
-        clearTimelineFallback();
-        runWelcomeTimeline();
-      },
-      { once: true }
-    );
-    welcomeVideo.addEventListener(
-      "error",
-      () => {
-        clearTimelineFallback();
-        window.setTimeout(runWelcomeTimeline, 150);
-      },
-      { once: true }
-    );
-
-    if (welcomeVideo.readyState >= 2) {
-      clearTimelineFallback();
+  attemptVideoPlayback(welcomeVideo, {
+    loop: false,
+    onBlocked: () => {
+      enableVideoFallback("welcome", welcomeVideo);
+      window.setTimeout(finishWelcomeScreen, 120);
+    },
+    onPlaying: () => {
       runWelcomeTimeline();
-    }
-  } else {
+    },
+  });
+
+  welcomeVideo.addEventListener("loadeddata", runWelcomeTimeline, { once: true });
+  welcomeVideo.addEventListener(
+    "error",
+    () => {
+      enableVideoFallback("welcome", welcomeVideo);
+      window.setTimeout(finishWelcomeScreen, 120);
+    },
+    { once: true }
+  );
+
+  if (welcomeVideo.readyState >= 2) {
     runWelcomeTimeline();
   }
+
+  window.setTimeout(runWelcomeTimeline, 1800);
 }
 
 function setupLuxuryMotion() {
-  bindVideoState(heroVideo);
-  markVideoPending(heroVideo);
-
   if (!window.gsap) {
-    startHeroVideoPlayback();
     return;
   }
 
@@ -451,7 +336,6 @@ function setupLuxuryMotion() {
     if (navShell) {
       gsap.set(navShell, { autoAlpha: 0 });
     }
-    startHeroVideoPlayback();
     return;
   }
 
@@ -519,9 +403,6 @@ function setupLuxuryMotion() {
 }
 
 window.addEventListener("load", () => {
-  bindVideoState(welcomeVideo);
-  bindVideoState(heroVideo);
-  markVideoPending(welcomeVideo);
   setupWelcomeScreen();
   setupLuxuryMotion();
 });

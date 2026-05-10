@@ -92,16 +92,6 @@ h4,
   display: none !important;
 }
 
-.video-pending {
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-
-.video-ready {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
 body.welcome-video-fallback #welcome-screen {
   background:
     radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.1), transparent 18%),
