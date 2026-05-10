@@ -4,6 +4,65 @@ const welcomeVideo = document.getElementById("welcome-video");
 const welcomeLogo = document.getElementById("intro-logo");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+function primeInlineVideo(video, { loop = false } = {}) {
+  if (!video) {
+    return;
+  }
+
+  video.muted = true;
+  video.defaultMuted = true;
+  video.playsInline = true;
+  video.loop = loop;
+  video.autoplay = true;
+  video.setAttribute("muted", "");
+  video.setAttribute("autoplay", "");
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "true");
+}
+
+function attemptVideoPlayback(video, { loop = false, onBlocked } = {}) {
+  if (!video) {
+    return Promise.resolve(false);
+  }
+
+  primeInlineVideo(video, { loop });
+
+  const playAttempt = video.play();
+  if (!playAttempt || typeof playAttempt.then !== "function") {
+    return Promise.resolve(true);
+  }
+
+  return playAttempt
+    .then(() => true)
+    .catch((error) => {
+      if (typeof onBlocked === "function") {
+        onBlocked(error);
+      }
+      return false;
+    });
+}
+
+function retryVideoPlaybackOnInteraction(video, options = {}) {
+  if (!video) {
+    return;
+  }
+
+  let retried = false;
+  const retry = () => {
+    if (retried) {
+      return;
+    }
+
+    retried = true;
+    attemptVideoPlayback(video, options);
+    window.removeEventListener("touchstart", retry);
+    window.removeEventListener("pointerdown", retry);
+  };
+
+  window.addEventListener("touchstart", retry, { once: true, passive: true });
+  window.addEventListener("pointerdown", retry, { once: true, passive: true });
+}
+
 function setupWelcomeScreen() {
   if (!welcomeScreen || !welcomeLogo) {
     return;
@@ -65,8 +124,13 @@ function setupWelcomeScreen() {
   }
 
   if (welcomeVideo) {
-    welcomeVideo.loop = false;
-    welcomeVideo.play().catch(() => {});
+    attemptVideoPlayback(welcomeVideo, {
+      loop: false,
+      onBlocked: () => {
+        retryVideoPlaybackOnInteraction(welcomeVideo, { loop: false });
+        window.setTimeout(runWelcomeTimeline, 500);
+      },
+    });
   }
 
   if (navLogoShell) {
@@ -225,10 +289,12 @@ function setupWelcomeScreen() {
 
 function setupLuxuryMotion() {
   if (heroVideo) {
-    heroVideo.muted = true;
-    heroVideo.defaultMuted = true;
-    heroVideo.playsInline = true;
-    heroVideo.play().catch(() => {});
+    attemptVideoPlayback(heroVideo, {
+      loop: true,
+      onBlocked: () => {
+        retryVideoPlaybackOnInteraction(heroVideo, { loop: true });
+      },
+    });
   }
 
   if (!window.gsap) {
