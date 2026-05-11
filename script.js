@@ -238,21 +238,22 @@ function dismissWelcomeSplash({ immediate = false } = {}) {
   const finishHidden = () => {
     finalizeWelcomeOverlayHidden();
   };
+  const hideTimeoutId = window.setTimeout(() => {
+    splashEl.removeEventListener("transitionend", onTransitionEnd);
+    finishHidden();
+  }, 1400);
 
   const onTransitionEnd = (event) => {
     if (event.target !== splashEl || event.propertyName !== "opacity") {
       return;
     }
 
+    window.clearTimeout(hideTimeoutId);
     splashEl.removeEventListener("transitionend", onTransitionEnd);
     finishHidden();
   };
 
   splashEl.addEventListener("transitionend", onTransitionEnd);
-  window.setTimeout(() => {
-    splashEl.removeEventListener("transitionend", onTransitionEnd);
-    finishHidden();
-  }, 1400);
 }
 
 function scheduleWelcomeAutoDismiss() {
@@ -319,7 +320,7 @@ function setupWelcomeSplash() {
   );
 
   retryVideoPlaybackOnInteraction(wVideo, {
-    loop: true,
+    loop: false,
     onPlaying: () => {
       setVideoFallback("welcome", false);
       wVideo.classList.remove("video-fallback-hidden");
@@ -330,7 +331,7 @@ function setupWelcomeSplash() {
   });
 
   attemptVideoPlayback(wVideo, {
-    loop: true,
+    loop: false,
     onPlaying: () => {
       wVideo.classList.remove("video-fallback-hidden");
       setVideoFallback("welcome", false);
